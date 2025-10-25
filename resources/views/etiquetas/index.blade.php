@@ -44,13 +44,14 @@
   /* ===== Modal ===== */
   #pdfModal{
     position:fixed; inset:0; background:rgba(0,0,0,.55);
-    display:none; z-index:3000; /* por encima del sidebar y tooltips */
+    display:none; z-index:3000;
   }
   #pdfModal.show{ display:block; }
 
   #pdfModal .win{
     background:#fff; width:92vw; max-width:1200px; height:86vh;
-    margin:7vh auto; border-radius:12px; display:flex; flex-direction:column; overflow:hidden;
+    margin:7vh auto; border-radius:12px;
+    display:flex; flex-direction:column; overflow:hidden;
     box-shadow:0 18px 40px rgba(0,0,0,.25);
   }
   #pdfModal .hd, #pdfModal .ft{
@@ -68,11 +69,9 @@
 @section('content')
 <div class="card"><div class="card-body">
 
-  {{-- (Sin banners Bootstrap: los toasts los maneja SweetAlert global) --}}
-
   {{-- Toolbar --}}
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="h6 m-0 text-secondary">Lotes</h2>
+    <h2 class="h6 m-0 text-secondary">Lotes de Etiquetas</h2>
     <a href="{{ route('etiquetas.create') }}" class="btn btn-primary">
       <i class="fa fa-plus me-1"></i>Nuevo
     </a>
@@ -81,8 +80,8 @@
   {{-- Filtros --}}
   <form method="GET" action="{{ route('etiquetas.index') }}" class="row g-2 mb-3">
     <div class="col-md-3">
-      <input name="producto" list="productos" class="form-control" placeholder="Producto exacto (sugerencias)"
-             value="{{ request('producto') }}">
+      <input name="producto" list="productos" class="form-control"
+             placeholder="Producto exacto (sugerencias)" value="{{ request('producto') }}">
       @if(isset($productos) && $productos->count())
         <datalist id="productos">
           @foreach($productos as $p)
@@ -140,19 +139,20 @@
             <td>{{ $l->numero_inicial }}</td>
             <td>{{ $l->cantidad }}</td>
             <td class="text-end">
+
               @if($l->pdf_path)
                 <button type="button"
                         class="btn btn-sm btn-outline-success"
                         title="Ver/Imprimir/Descargar PDF"
-                        data-src="{{ route('storage.etiquetas', basename($l->pdf_path)) }}"
+                        data-src="{{ asset($l->pdf_path) }}"
                         data-title="Lote #{{ $l->id }}"
-                        data-download="{{ route('etiquetas.descargar',$l) }}"
+                        data-download="{{ asset($l->pdf_path) }}"
                         onclick="openPdf(this)">
                   <i class="fa fa-download"></i>
                 </button>
               @endif
 
-              {{-- Eliminación con SweetAlert2 (confirmación en top-end) --}}
+              {{-- Eliminación con confirmación --}}
               <form class="d-inline js-delete"
                     method="POST"
                     action="{{ route('etiquetas.destroy', ['lote' => $l->id]) }}"
@@ -165,6 +165,7 @@
                   <i class="fa fa-trash"></i>
                 </button>
               </form>
+
             </td>
           </tr>
         @empty
@@ -179,7 +180,7 @@
   </div>
 </div></div>
 
-{{-- ===== Modal ===== --}}
+{{-- ===== Modal PDF ===== --}}
 <div id="pdfModal" aria-hidden="true">
   <div class="win" role="dialog" aria-modal="true" aria-labelledby="pdfModalTitle">
     <div class="hd">
@@ -222,13 +223,17 @@
 
   function printPDF() {
     const frame = document.getElementById('pdfFrame');
-    if (frame && frame.contentWindow) { frame.contentWindow.focus(); frame.contentWindow.print(); }
+    if (frame && frame.contentWindow) {
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
+    }
   }
 
   // Cierre al hacer click fuera del cuadro
   document.getElementById('pdfModal').addEventListener('click', e => {
     if (e.target.id === 'pdfModal') closePDFModal();
   });
+
   // Cierre con ESC
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closePDFModal(); });
 </script>

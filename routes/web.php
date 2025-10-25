@@ -15,8 +15,9 @@ use App\Http\Controllers\{
 | RUTAS WEB DEL SISTEMA DIPII
 |--------------------------------------------------------------------------
 | Este archivo contiene todas las rutas principales del sistema DIPII,
-| incluyendo los módulos administrativos, dashboard y las rutas especiales
-| para servir archivos PDF en Railway sin usar storage:link.
+| incluyendo los módulos administrativos y dashboard.
+| En esta versión ya no se usan rutas /storage/ ni storage:link,
+| porque los PDFs se guardan directamente en /public.
 |--------------------------------------------------------------------------
 */
 
@@ -57,29 +58,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('etiquetas/{lote}/descargar', [EtiquetaController::class, 'descargar'])
         ->name('etiquetas.descargar');
 });
-
-// ===================== RUTAS PARA ARCHIVOS STORAGE =====================
-// Estas rutas reemplazan la necesidad de ejecutar "php artisan storage:link"
-// Funcionan tanto en local como en Railway y permiten servir PDFs e imágenes
-// directamente desde storage/app/public/... sin enlaces simbólicos.
-
-// Certificados
-Route::get('/storage/certificados/{filename}', function ($filename) {
-    $path = storage_path('app/public/certificados/' . $filename);
-    abort_unless(file_exists($path), 404, 'Archivo no encontrado');
-    return response()->file($path);
-})->where('filename', '.*')->name('storage.certificados');
-
-// Etiquetas
-Route::get('/storage/etiquetas/{filename}', function ($filename) {
-    $path = storage_path('app/public/etiquetas/' . $filename);
-    abort_unless(file_exists($path), 404, 'Archivo no encontrado');
-    return response()->file($path);
-})->where('filename', '.*')->name('storage.etiquetas');
-
-// Ejemplo para futuras carpetas (ingresos, proveedores, etc.)
-// Route::get('/storage/ingresos/{filename}', fn($filename) => response()->file(storage_path('app/public/ingresos/'.$filename)))
-//     ->where('filename','.*')->name('storage.ingresos');
 
 // ===================== AUTENTICACIÓN Y PERFIL =====================
 require __DIR__ . '/auth.php';
