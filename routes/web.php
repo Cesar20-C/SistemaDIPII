@@ -44,25 +44,15 @@ Route::middleware(['auth'])->group(function () {
         ->name('etiquetas.descargar');
 });
 
-
-// 🔹 Servir archivos desde storage (para Railway o producción sin storage:link)
 Route::get('/storage/certificados/{filename}', function ($filename) {
     $path = storage_path('app/public/certificados/' . $filename);
-
-    if (!file_exists($path)) {
-        abort(404, 'Archivo no encontrado');
-    }
-
+    abort_unless(file_exists($path), 404);
     return response()->file($path);
 })->where('filename', '.*');
 
 Route::get('/storage/etiquetas/{filename}', function ($filename) {
     $path = storage_path('app/public/etiquetas/' . $filename);
-
-    if (!file_exists($path)) {
-        abort(404, 'Archivo no encontrado');
-    }
-
+    abort_unless(file_exists($path), 404);
     return response()->file($path);
 })->where('filename', '.*');
 

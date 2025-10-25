@@ -144,7 +144,7 @@
                 <button type="button"
                         class="btn btn-sm btn-outline-success"
                         title="Ver/Imprimir/Descargar PDF"
-                        data-src="{{ asset('storage/'.$l->pdf_path) }}"
+                        data-src="{{ url('storage/'.$l->pdf_path) }}"
                         data-title="Lote #{{ $l->id }}"
                         data-download="{{ route('etiquetas.descargar',$l) }}"
                         onclick="openPdf(this)">
