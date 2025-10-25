@@ -20,6 +20,7 @@ use App\Http\Controllers\{
 |--------------------------------------------------------------------------
 */
 
+// Redirección inicial
 Route::get('/', fn () => redirect()->route('dashboard'));
 
 // ===================== RUTAS PROTEGIDAS =====================
@@ -52,6 +53,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('etiquetas', EtiquetaController::class)
         ->only(['index', 'create', 'store', 'destroy'])
         ->parameters(['etiquetas' => 'lote']);
+
     Route::get('etiquetas/{lote}/descargar', [EtiquetaController::class, 'descargar'])
         ->name('etiquetas.descargar');
 });
@@ -61,20 +63,23 @@ Route::middleware(['auth'])->group(function () {
 // Funcionan tanto en local como en Railway y permiten servir PDFs e imágenes
 // directamente desde storage/app/public/... sin enlaces simbólicos.
 
+// Certificados
 Route::get('/storage/certificados/{filename}', function ($filename) {
     $path = storage_path('app/public/certificados/' . $filename);
     abort_unless(file_exists($path), 404, 'Archivo no encontrado');
     return response()->file($path);
-})->where('filename', '.*');
+})->where('filename', '.*')->name('storage.certificados');
 
+// Etiquetas
 Route::get('/storage/etiquetas/{filename}', function ($filename) {
     $path = storage_path('app/public/etiquetas/' . $filename);
     abort_unless(file_exists($path), 404, 'Archivo no encontrado');
     return response()->file($path);
-})->where('filename', '.*');
+})->where('filename', '.*')->name('storage.etiquetas');
 
-// Si en el futuro guardas PDFs de ingresos o proveedores, puedes copiar este patrón:
-// Route::get('/storage/ingresos/{filename}', fn($filename) => response()->file(storage_path('app/public/ingresos/'.$filename)))->where('filename','.*');
+// Ejemplo para futuras carpetas (ingresos, proveedores, etc.)
+// Route::get('/storage/ingresos/{filename}', fn($filename) => response()->file(storage_path('app/public/ingresos/'.$filename)))
+//     ->where('filename','.*')->name('storage.ingresos');
 
 // ===================== AUTENTICACIÓN Y PERFIL =====================
 require __DIR__ . '/auth.php';
