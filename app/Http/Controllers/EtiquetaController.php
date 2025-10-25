@@ -60,6 +60,7 @@ class EtiquetaController extends Controller
      */
     public function store(Request $r)
     {
+        // Validación de datos
         $d = $r->validate([
             'fecha_elaboracion' => ['required', 'date'],
             'producto'          => ['required', 'in:CEBOLLA EN CUBOS,JALAPEÑO EN CUBOS,PIMIENTO EN CUBOS'],
@@ -68,41 +69,62 @@ class EtiquetaController extends Controller
             'cantidad'          => ['required', 'integer', 'min:1', 'max:2000'],
         ]);
 
+        // Normalización y cálculos
         $d['producto']           = Str::upper($d['producto']);
         $d['fecha_vencimiento']  = Carbon::parse($d['fecha_elaboracion'])->addDays(2)->toDateString();
         $d['peso_kg']            = number_format((float) $d['peso_kg'], 2, '.', '');
 
+        // Crear el registro del lote
         $lote = EtiquetaLote::create($d);
 
+        // Construcción de etiquetas
         $labels = $this->buildLabelsData($lote);
 
         // Logo opcional
         $logoBase64 = null;
-        $logoPath   = public_path('imagen/Logo.png');
+        $logoPath = public_path('imagen/Logo.png');
         if (file_exists($logoPath)) {
             $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
         }
 
-        // Generar PDF
+        // Generar el PDF
         $pdf = Pdf::loadView('etiquetas.pdf', [
             'lote'   => $lote,
             'labels' => $labels,
             'logo'   => $logoBase64,
         ])->setPaper('letter');
 
-        // Guardar directamente en /public/etiquetas/
+        // ===== CREACIÓN Y PERMISOS DE LA CARPETA =====
         $dir = public_path('etiquetas');
-        if (!file_exists($dir)) mkdir($dir, 0755, true);
+
+        if (!is_dir($dir)) {
+            mkdir($dir, 0777, true);
+        } else {
+            @chmod($dir, 0777);
+        }
 
         $file = "lote_{$lote->id}.pdf";
-        $pdf->save($dir . '/' . $file);
+        $fullPath = $dir . '/' . $file;
 
-        // Guardar ruta relativa
+        // Guardar PDF
+        try {
+            $pdf->save($fullPath);
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', 'No se pudo guardar el PDF: ' . $e->getMessage());
+        }
+
+        // Verificar que el PDF se haya creado
+        if (!file_exists($fullPath)) {
+            return back()->with('error', 'Error: el PDF no se guardó en el servidor.');
+        }
+
+        // Guardar ruta relativa (para mostrar desde el navegador)
         $lote->update(['pdf_path' => "etiquetas/{$file}"]);
 
         return redirect()
             ->route('etiquetas.index')
-            ->with('success', 'Lote guardado y PDF generado.');
+            ->with('success', 'Lote guardado y PDF generado correctamente.');
     }
 
     /**
