@@ -59,73 +59,77 @@ class EtiquetaController extends Controller
      * Guarda el lote y genera el PDF con etiquetas consecutivas.
      */
     public function store(Request $r)
-    {
-        // Validación de datos
-        $d = $r->validate([
-            'fecha_elaboracion' => ['required', 'date'],
-            'producto'          => ['required', 'in:CEBOLLA EN CUBOS,JALAPEÑO EN CUBOS,PIMIENTO EN CUBOS'],
-            'peso_kg'           => ['required', 'regex:/^\d{1,3}(\.\d{2})$/'],
-            'numero_inicial'    => ['required', 'integer', 'min:1'],
-            'cantidad'          => ['required', 'integer', 'min:1', 'max:2000'],
-        ]);
+{
+    // ===================== Validación =====================
+    $d = $r->validate([
+        'fecha_elaboracion' => ['required', 'date'],
+        'producto'          => ['required', 'in:CEBOLLA EN CUBOS,JALAPEÑO EN CUBOS,PIMIENTO EN CUBOS'],
+        'peso_kg'           => ['required', 'numeric', 'between:0,999.99'],
+        'numero_inicial'    => ['required', 'integer', 'min:1'],
+        'cantidad'          => ['required', 'integer', 'min:1', 'max:2000'],
+    ]);
 
-        // Normalización y cálculos
-        $d['producto']           = Str::upper($d['producto']);
-        $d['fecha_vencimiento']  = Carbon::parse($d['fecha_elaboracion'])->addDays(2)->toDateString();
-        $d['peso_kg']            = number_format((float) $d['peso_kg'], 2, '.', '');
+    // ===================== Normalización =====================
+    $d['producto']          = Str::upper($d['producto']);
+    $d['fecha_vencimiento'] = Carbon::parse($d['fecha_elaboracion'])->addDays(2)->toDateString();
+    $d['peso_kg']           = number_format((float) $d['peso_kg'], 2, '.', '');
 
-        // Crear el registro del lote
+    // ===================== Crear el lote =====================
+    try {
         $lote = EtiquetaLote::create($d);
-
-        // Construcción de etiquetas
-        $labels = $this->buildLabelsData($lote);
-
-        // Logo opcional
-        $logoBase64 = null;
-        $logoPath = public_path('imagen/Logo.png');
-        if (file_exists($logoPath)) {
-            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
-        }
-
-        // Generar el PDF
-        $pdf = Pdf::loadView('etiquetas.pdf', [
-            'lote'   => $lote,
-            'labels' => $labels,
-            'logo'   => $logoBase64,
-        ])->setPaper('letter');
-
-        // ===== CREACIÓN Y PERMISOS DE LA CARPETA =====
-        $dir = public_path('etiquetas');
-
-        if (!is_dir($dir)) {
-            mkdir($dir, 0777, true);
-        } else {
-            @chmod($dir, 0777);
-        }
-
-        $file = "lote_{$lote->id}.pdf";
-        $fullPath = $dir . '/' . $file;
-
-        // Guardar PDF
-        try {
-            $pdf->save($fullPath);
-        } catch (\Throwable $e) {
-            report($e);
-            return back()->with('error', 'No se pudo guardar el PDF: ' . $e->getMessage());
-        }
-
-        // Verificar que el PDF se haya creado
-        if (!file_exists($fullPath)) {
-            return back()->with('error', 'Error: el PDF no se guardó en el servidor.');
-        }
-
-        // Guardar ruta relativa (para mostrar desde el navegador)
-        $lote->update(['pdf_path' => "etiquetas/{$file}"]);
-
-        return redirect()
-            ->route('etiquetas.index')
-            ->with('success', 'Lote guardado y PDF generado correctamente.');
+    } catch (\Throwable $e) {
+        return back()->with('error', 'No se pudo crear el lote: ' . $e->getMessage());
     }
+
+    // ===================== Construir etiquetas =====================
+    $labels = $this->buildLabelsData($lote);
+
+    // ===================== Logo opcional =====================
+    $logoBase64 = null;
+    $logoPath = public_path('imagen/Logo.png');
+    if (file_exists($logoPath)) {
+        $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+    }
+
+    // ===================== Generar PDF =====================
+    $pdf = Pdf::loadView('etiquetas.pdf', [
+        'lote'   => $lote,
+        'labels' => $labels,
+        'logo'   => $logoBase64,
+    ])->setPaper('letter');
+
+    // ===================== Directorio destino =====================
+    $dir = public_path('etiquetas');
+
+    // Crear carpeta si no existe
+    if (!is_dir($dir)) {
+        mkdir($dir, 0777, true);
+    } else {
+        @chmod($dir, 0777);
+    }
+
+    // ===================== Guardar archivo =====================
+    $file = "lote_{$lote->id}.pdf";
+    $fullPath = $dir . '/' . $file;
+
+    try {
+        $pdf->save($fullPath);
+    } catch (\Throwable $e) {
+        return back()->with('error', 'No se pudo guardar el PDF: ' . $e->getMessage());
+    }
+
+    if (!file_exists($fullPath)) {
+        return back()->with('error', 'Error: el PDF no se guardó en el servidor.');
+    }
+
+    // ===================== Guardar ruta pública =====================
+    $publicPath = "etiquetas/{$file}";
+    $lote->update(['pdf_path' => $publicPath]);
+
+    return redirect()
+        ->route('etiquetas.index')
+        ->with('success', 'Lote guardado y PDF generado correctamente.');
+}
 
     /**
      * Descarga / abre el PDF generado.
