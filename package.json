@@ -3,8 +3,9 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "dev": "vite",
         "build": "vite build",
-        "dev": "vite"
+        "start": "vite preview --port $PORT --host"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
